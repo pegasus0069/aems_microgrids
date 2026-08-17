@@ -31,7 +31,7 @@ Imagine a small industrial site that gets its electricity from four sources: sol
 This project builds an EMS that uses artificial intelligence to make that decision in four stages:
 1. **Data:** Downloads 5 years of real meteorological data and generates a synthetic industrial load profile.
 2. **AI Training:** Teaches 7 different neural network architectures what a "good" dispatch decision looks like using the entire multi-year dataset, mathematically scores their speed vs. accuracy, and selects the winner.
-3. **Simulation Build:** Programmatically constructs a fully wired Simulink model of the physical power system driven by the winning AI model.
+3. **Simulation Build:** Programmatically constructs a fully wired Simulink model of the physical power system driven by the best AI model.
 4. **Live Execution:** Streams the simulation in an interactive dashboard, showing battery states, grid status, and live sensor data.
 
 ---
@@ -47,11 +47,18 @@ This project builds an EMS that uses artificial intelligence to make that decisi
 
 ## 3. System Architecture — The 4 Phases
 
-> 1. **PHASE 1:** Data Acquisition & Labeling
-> 2. **PHASE 2:** Train & benchmark 7 AI models, pick the best one
-> 3. **PHASE 3:** Build wired Simulink power-flow model driven by the winning AI model
-> 4. **PHASE 4:** Live multi-tab dashboard streaming the simulation with real-time charts
+```
+ ┌──────────────┐   ┌────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐
+ │  PHASE 1     │   │  PHASE 2           │   │  PHASE 3             │   │  PHASE 4            │
+ │  Data        │──▶│  Train & benchmark│──▶│  Build wired        │──▶│  Live multi-tab      │
+ │  Acquisition │   │  7 AI models,      │   │  Simulink power-flow │   │  dashboard streaming │
+ │  & Labeling  │   │  pick the best one │   │  model driven by the │   │  the simulation with │
+ │              │   │                    │   │  best AI model    │   │  real-time charts    │
+ └──────────────┘   └────────────────────┘   └──────────────────────┘   └────────────────────┘
+```
 
+![System Architecture](system_flowdiag.png)
+ 
 ---
 
 ## 4. Phase 1: Data Acquisition, Normalization & Heuristic Mathematics
@@ -164,7 +171,7 @@ $$Score=0.4\times RMSE_{norm}+0.6\times Latency_{norm}$$
 
 ## 7. Phase 3: The Simulink Power-Flow Model
 
-This phase programmatically builds (no manual drag-and-drop needed) a new Simulink model file (`.slx`) representing the physical power system, entirely out of **base Simulink blocks** — no Simscape Electrical toolbox required. Every block is genuinely wired to the next with `add_line` (a common issue in auto-generated Simulink models is blocks that are placed but never actually connected — this script avoids that).
+This phase programmatically builds (no manual drag-and-drop needed) a new Simulink model file (`.slx`) representing the physical power system. Every block is genuinely wired to the next with `add_line` (a common issue in auto-generated Simulink models is blocks that are placed but never actually connected — this script avoids that).
  
 **Signal flow, in order:**
  
@@ -192,7 +199,7 @@ The script launches a live `uifigure` UI streaming the cyber-physical system in 
 - **DC Bus Voltage chart**: a simulated voltage signal around the 600V nominal bus voltage, reacting to how well generation is tracking demand.
 ### Tab 2 — AI Scheduler Benchmarking
 - Three side-by-side bar charts comparing all 7 trained models on **RMSE**, **Accuracy %**, and **Latency**.
-- A summary line showing the winning model's exact accuracy, R², RMSE, and latency.
+- A summary line showing the best model's exact accuracy, R², RMSE, and latency.
 ### Tab 3 — Live Sensor & Signal Monitor
 - **11 individual scrolling charts**, one for every single signal wired into the Simulink model's input ports (see the table in §4) — Solar Irradiance, Wind Speed, Load Demand, Temperature, Relative Humidity, Surface Pressure, Battery SOC, Time Index, Season Index, Power Imbalance, and Previous Action — all updating every simulation step, in sync with Tab 1.
 The simulation runs automatically once the dashboard opens; you can switch tabs freely at any time without interrupting the live stream. Closing the dashboard window stops the simulation loop cleanly.
@@ -229,7 +236,7 @@ $$V_{bus}(t)=600+20\left(\frac{P_{total}(t)-Demand(t)}{Demand(t)}\right)+1.2\cdo
 3. **Open MATLAB** and navigate to the file's folder.
 4. **Run the script** from the Command Window.
 5. **Execution Flow:**
-   * Phase 1 fetches 4 years of data (~35,000 hourly steps).
+   * Phase 1 fetches 5 years of data (~35,000 hourly steps).
    * Phase 2 trains all 7 architectures. *(Note: Training 7 models on 35k steps for 150 epochs is computationally heavy. Expect this to take several minutes on CPU).*
    * Phase 3 builds the `.slx` file.
    * Phase 4 launches the Dashboard.
